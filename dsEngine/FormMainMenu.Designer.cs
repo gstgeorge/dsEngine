@@ -1,6 +1,6 @@
 ﻿namespace dsEngine
 {
-    partial class Form1
+    partial class FormMainMenu
     {
         /// <summary>
         /// Required designer variable.
