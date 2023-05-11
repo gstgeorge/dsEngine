@@ -9,7 +9,7 @@ namespace dsEngine
     internal class Invoice
     {
         private Dealer dealer;
-        SortedDictionary<DateTime, SortedSet<Vehicle>> workOrders;
+        SortedDictionary<DateTime, List<Vehicle>> workOrders;
 
         /// <summary>
         /// Constructor
@@ -18,7 +18,7 @@ namespace dsEngine
         public Invoice(Dealer dealer)
         {
             this.dealer = dealer;
-            workOrders = new SortedDictionary<DateTime, SortedSet<Vehicle>>();
+            workOrders = new SortedDictionary<DateTime, List<Vehicle>>();
         }
 
         /// <summary>
@@ -32,15 +32,16 @@ namespace dsEngine
             // If there is no workorder for the given date, create one
             if (!workOrders.ContainsKey(d))
             {
-                workOrders.Add(d, new SortedSet<Vehicle>());
+                workOrders.Add(d, new List<Vehicle>());
             }
 
             // Add the vehicle to the workorder
             // If the vehicle already exists on the workorder, throw exception
-            if (workOrders[d].Add(v) == false)
+            if (workOrders[d].Contains(v))
             {
                 throw new ArgumentException($"{dealer.Name}: {v} has already been billed on {d.Month}/{d.Day}/{d.Year}");
             }
+            else workOrders[d].Add(v);
         }
     }
 }
