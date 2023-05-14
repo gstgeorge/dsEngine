@@ -3,52 +3,78 @@
 namespace dsEngine
 {
     /// <summary>
-    /// Stores vehicle data
+    /// Stores vehicle data for use in creating a line item on a work summary report.
     /// </summary>
     internal class Vehicle : IComparable<Vehicle>
     {
-        public enum Condition {NEW, USED};
+        /// <summary>
+        /// The vehicle's condition.
+        /// </summary>
+        public enum Condition { USED, NEW };
 
-        private string vin;
-        private string stock;
-        private UInt32? refno;
-        private Condition cond;
-        private short year;
-        private string make;
-        private string model;
+
+        // Private fields.
+        private string _vin;
+        private string _stock;
+        private UInt32? _refno;
+        private Condition _cond;
+        private short _year;
+        private string _make;
+        private string _model;
+
 
         /// <summary>
-        /// Constructor
+        /// Initializes a new instance of the Vehicle class.
         /// </summary>
-        /// <param name="vin">The vehicle's VIN number</param>
-        /// <param name="stock">The vehicle's stock number</param>
-        /// <param name="condition">The vehicle's condition</param>
-        /// <param name="year">The vehicle's model year</param>
-        /// <param name="make">The vehicle's manufacturer</param>
-        /// <param name="model">The vehicle's model name</param>
-        /// <param name="refno">An optional reference number</param>
+        /// <param name="vin">The vehicle's VIN number.</param>
+        /// <param name="stock">The vehicle's stock number.</param>
+        /// <param name="condition">The vehicle's condition.</param>
+        /// <param name="year">The vehicle's model year.</param>
+        /// <param name="make">The vehicle's manufacturer.</param>
+        /// <param name="model">The vehicle's model name.</param>
+        /// <param name="refno">An optional reference number.</param>
         public Vehicle(string vin, string stock, Condition condition, short year, string make, string model, uint? refno = null)
         {
-            this.vin = vin;
-            this.stock = stock;
-            this.refno = refno;
-            this.cond = condition;
-            this.year = year;
-            this.make = make;
-            this.model = model;
+            _vin = vin;
+            _stock = stock;
+            _refno = refno;
+            _cond = condition;
+            _year = year;
+            _make = make;
+            _model = model;
         }
 
-        // Properties
-        public string Vin { get => vin; }
-        public string Stock { get => stock; }
-        public UInt32? Refno { get => refno; }
-        public Condition Cond { get => cond; }
-        public string Description { get => $"{year} {make} {model}"; }
+
+        /// <summary>
+        /// The vehicle's VIN number.
+        /// </summary>
+        public string Vin { get => _vin; }
+
+        /// <summary>
+        /// The vehicle's stock number.
+        /// </summary>
+        public string Stock { get => _stock; }
+
+        /// <summary>
+        /// An optional reference number that may be supplied by the vendor.
+        /// </summary>
+        public UInt32? Refno { get => _refno; }
+
+        /// <summary>
+        /// The vehicle's condition.
+        /// </summary>
+        public Condition Cond { get => _cond; }
+
+        /// <summary>
+        /// The vehicle's line item description to be printed on a work summary report.
+        /// </summary>
+        public string Description { get => $"{_year} {_make} {_model}"; }
+
 
         // Override ToString
         public override string ToString()
         {
-            return $"{stock} ({Description})";
+            return $"{_stock} ({Description})";
         }
 
         // Implement IComparable interface
@@ -56,12 +82,20 @@ namespace dsEngine
         {
             if (other == null) { throw new ArgumentNullException(); }
 
-            if (vin.Equals(other.Vin))
+            // If the VINs match, then the vehicles are equal, regardless of any other attribute.
+            if (_vin.Equals(other.Vin))
             {
                 return 0;
             }
 
-            return stock.CompareTo(other.stock);
+            // If the vehicles are of like condition, sort based on stock number.
+            else if (_cond.Equals(other.Cond))
+            {
+                return _stock.CompareTo(other._stock);
+            }
+
+            // If the vehicles are not of like condition, place the Used vehicle first.
+            else return _cond.CompareTo(other._cond);
         }
     }
 }
