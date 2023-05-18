@@ -18,7 +18,7 @@ namespace dsEngine
         private string _stock;
         private UInt32? _refno;
         private Condition _cond;
-        private short _year;
+        private ushort _year;
         private string _make;
         private string _model;
 
@@ -33,7 +33,7 @@ namespace dsEngine
         /// <param name="make">The vehicle's manufacturer.</param>
         /// <param name="model">The vehicle's model name.</param>
         /// <param name="refno">An optional reference number.</param>
-        public Vehicle(string vin, string stock, Condition condition, short year, string make, string model, uint? refno = null)
+        public Vehicle(string vin, string stock, Condition condition, ushort year, string make, string model, uint? refno = null)
         {
             _vin = vin;
             _stock = stock;
