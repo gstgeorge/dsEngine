@@ -1,9 +1,12 @@
-﻿using Newtonsoft.Json;
+﻿using GenericParsing;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 
 namespace dsEngine
 {
@@ -15,6 +18,7 @@ namespace dsEngine
         // Private fields.
         private string _name;
 
+        #region Properties
 
         /// <summary>
         /// Initializes a new instance of the Dealer class.
@@ -80,7 +84,7 @@ namespace dsEngine
         /// Vehicles which have been processed for this dealer.
         /// </summary>
         [JsonIgnore]
-        public SortedDictionary<DateTime, List<Vehicle>> WorkOrders { get; private set; }
+        public SortedDictionary<DateTime, List<Vehicle>> WorkOrders { get; private set; } = new SortedDictionary<DateTime, List<Vehicle>>();
 
         /// <summary>
         /// List of monthly charges that should be billed to the dealer.
@@ -96,8 +100,66 @@ namespace dsEngine
         /// <summary>
         /// Return the dealer's name without any whitespace characters for use as a filename.
         /// </summary>
-        private string FileName { get => _name.Replace(' ', '_').ToLower(); }
+        public string FileName { get => _name.Replace(' ', '_').ToLower(); }
 
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Parse one or more files, adding each vehicle to the dealer's work orders
+        /// </summary>
+        /// <param name="paths">The paths of the files to process</param>
+        public static void ImportVehiclesFromFile(params string[] paths)
+        {
+            foreach (string path in paths)
+            {
+                try
+                {
+                    // Process the file based on the filetype
+                    switch (Path.GetExtension(path).ToLower())
+                    {
+                        case ".csv":
+                            ParseCSV(path);
+                            MessageBox.Show($"Processed {path}");
+                            break;
+                        
+                        // TODO: add xlsx support
+
+                        default: // File is not of a supported format.
+                            throw new InvalidDataException("File is an invalid type.");
+                    }
+                }
+
+                // File is either an invalid filetype, or unable to be recognized as belonging to a supported data source.
+                catch (InvalidDataException ide)
+                {
+                    string errorMsg = "Unable to import from " + Path.GetFileName(path) + "." + Environment.NewLine +
+                        ide.Message + Environment.NewLine + Environment.NewLine + "Continue processing any remaining files?";
+
+                    if (MessageBox.Show(errorMsg, "ERROR", MessageBoxButtons.YesNo, MessageBoxIcon.Error) == DialogResult.Yes)
+                    {
+                        continue;
+                    }
+                    else return;
+                }
+
+                // Dealer does not exist in the dealer directory.
+                // TODO: Prompt user to add dealer to the dealer directory and attempt to re-process this file
+                catch (InvalidOperationException)
+                {
+                    MessageBox.Show("Dealer not found. Skipping.");
+                    continue;
+                }
+
+                // Vehicle already exists on this work order.
+                // TODO: Do something with this.
+                catch (ArgumentException)
+                {
+                    continue;
+                }
+            }
+        }
 
         /// <summary>
         /// Load saved dealer configs from disk and add them to the dealer directory.
@@ -116,32 +178,44 @@ namespace dsEngine
         /// <summary>
         /// Write the dealer settings to disk at <see cref="Settings.DEALER_SETTINGS_PATH"/>.
         /// </summary>
-        public void Save()
+        private void Save()
         {
             File.WriteAllText(Settings.DEALER_SETTINGS_PATH + FileName + ".json", JsonConvert.SerializeObject(this, Formatting.Indented));
         }
 
+
         /// <summary>
-        /// Add a vehicle to a specified workorder.
+        /// Add a vehicle to the work order of a specified dealer.
         /// </summary>
-        /// <param name="d">The date of the workorder.</param>
-        /// <param name="v">The vehicle to add.</param>
+        /// <param name="dealerName">The dealer's name.</param>
+        /// <param name="date">The date of the workorder.</param>
+        /// <param name="vehicle">The vehicle to add.</param>
+        /// <exception cref="InvalidOperationException">Dealer does not exist in the dealer directory.</exception>
         /// <exception cref="ArgumentException">Vehicle already exists on specified workorder.</exception>
-        public void AddVehicleToWorkOrder(DateTime d, Vehicle v)
+        private static void AddVehicleToWorkOrder(string dealerName, DateTime date, Vehicle vehicle)
         {
-            // If there is no work order for the given date, create one.
-            if (!WorkOrders.ContainsKey(d))
+            // Lookup dealer in dealer directory
+            var dealer = DealerDirectory.FirstOrDefault(x => x.Name == dealerName);
+
+            // If dealer does not exist in the dealer directory, throw an exception.
+            if (dealer == null)
             {
-                WorkOrders.Add(d, new List<Vehicle>());
+                throw new InvalidOperationException("Dealer configuration not found.");
+            }
+
+            // If there is no work order for the given date, create one.
+            if (!dealer.WorkOrders.ContainsKey(date))
+            {
+                dealer.WorkOrders.Add(date, new List<Vehicle>());
             }
 
             // Add the vehicle to the workorder
             // If the vehicle already exists on the workorder, throw exception
-            if (WorkOrders[d].Contains(v))
+            if (dealer.WorkOrders[date].Contains(vehicle))
             {
-                throw new ArgumentException($"{Name}: {v} has already been billed on {d.Month}/{d.Day}/{d.Year}");
+                throw new ArgumentException($"{dealer.Name}: {vehicle} has already been billed on {date.Month}/{date.Day}/{date.Year}");
             }
-            else WorkOrders[d].Add(v);
+            else dealer.WorkOrders[date].Add(vehicle);
         }
 
         // Implement IComparable interface
@@ -149,7 +223,79 @@ namespace dsEngine
         {
             return Name.CompareTo(other.Name);
         }
-            
+
+        /// <summary>
+        /// Process a CSV file of vehicle data, adding each vehicle to the dealer's work orders.
+        /// </summary>
+        /// <param name="path">The path of the file to process.</param>
+        /// <exception cref="ArgumentException">Vehicle already exists on specified workorder.</exception>
+        /// <exception cref="InvalidDataException">The file is not formatted in a recognizable manner.</exception>
+        /// <exception cref="InvalidOperationException">Dealer does not exist in the dealer directory.</exception>
+        private static void ParseCSV(string path)
+        {
+            DataTable dt = new DataTable();
+
+            // Parse file as DataTable
+            using (GenericParserAdapter parser = new GenericParserAdapter(path)) // TODO: handle file in use SYSTEM.IO.Exception
+            {
+                parser.ColumnDelimiter = ',';
+                parser.FirstRowHasHeader = true;
+                parser.SkipStartingDataRows = 0;
+                parser.MaxBufferSize = 4096;
+                parser.MaxRows = 1000;
+                dt = parser.GetDataTable();
+            }
+
+            // Identify the provider based on the number of columns, and set the appropiate column names.
+            string vin, stock, condition, year, make, model, date;
+
+            switch (dt.Columns.Count)
+            {
+                case 21: // Autouplink Tech
+
+                    vin = "VIN";
+                    stock = "Stock Number";
+                    condition = "Vehicle Stock Type";
+                    year = "Model Year";
+                    make = "Make";
+                    model = "Model";
+                    date = "Service Date/Time";
+                    break;
+
+                default:
+                    throw new InvalidDataException("Data source is unsupported or cannot be determined.");
+            }
+
+            // Process each vehicle
+            foreach (DataRow row in dt.Rows)
+            {
+                Vehicle v = new Vehicle(
+                    row[vin].ToString(),
+                    row[stock].ToString(),
+                    (Vehicle.Condition)Enum.Parse(typeof(Vehicle.Condition), row[condition].ToString()),
+                    Convert.ToUInt16(row[year]),
+                    row[make].ToString(),
+                    row[model].ToString()
+                    );
+
+                DateTime d = DateTime.Parse(row[date].ToString());
+
+                try
+                {
+                    AddVehicleToWorkOrder(row["Dealer Name"].ToString(), new DateTime(d.Year, d.Month, d.Day), v);
+                }
+                catch (InvalidOperationException ioex)
+                {
+                    throw ioex;
+                }
+                catch (ArgumentException aex)
+                {
+                    throw aex;
+                }
+            }
+        }
+
+        #endregion
 
         /// <summary>
         /// Stores info on monthly charges.
