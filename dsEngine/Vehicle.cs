@@ -21,6 +21,7 @@ namespace dsEngine
         private ushort _year;
         private string _make;
         private string _model;
+        private decimal _price;
 
 
         /// <summary>
@@ -33,7 +34,7 @@ namespace dsEngine
         /// <param name="make">The vehicle's manufacturer.</param>
         /// <param name="model">The vehicle's model name.</param>
         /// <param name="refno">An optional reference number.</param>
-        public Vehicle(string vin, string stock, Condition condition, ushort year, string make, string model, uint? refno = null)
+        public Vehicle(string vin, string stock, Condition condition, ushort year, string make, string model, decimal price, uint? refno = null)
         {
             _vin = vin;
             _stock = stock;
@@ -64,6 +65,11 @@ namespace dsEngine
         /// The vehicle's condition.
         /// </summary>
         public Condition Cond { get => _cond; }
+
+        /// <summary>
+        /// The amount billed to the dealer to process this vehicle.
+        /// </summary>
+        public decimal Price { get => _price; }
 
         /// <summary>
         /// The vehicle's line item description to be printed on a work summary report.

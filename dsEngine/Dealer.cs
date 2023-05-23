@@ -121,7 +121,6 @@ namespace dsEngine
                     {
                         case ".csv":
                             ParseCSV(path);
-                            MessageBox.Show($"Processed {path}");
                             break;
                         
                         // TODO: add xlsx support
@@ -247,7 +246,7 @@ namespace dsEngine
             }
 
             // Identify the provider based on the number of columns, and set the appropiate column names.
-            string vin, stock, condition, year, make, model, date;
+            string vin, stock, condition, year, make, model, price, date;
 
             switch (dt.Columns.Count)
             {
@@ -259,6 +258,7 @@ namespace dsEngine
                     year = "Model Year";
                     make = "Make";
                     model = "Model";
+                    price = "Service Type Price";
                     date = "Service Date/Time";
                     break;
 
@@ -275,7 +275,8 @@ namespace dsEngine
                     (Vehicle.Condition)Enum.Parse(typeof(Vehicle.Condition), row[condition].ToString()),
                     Convert.ToUInt16(row[year]),
                     row[make].ToString(),
-                    row[model].ToString()
+                    row[model].ToString(),
+                    decimal.Parse(row[price].ToString())
                     );
 
                 DateTime d = DateTime.Parse(row[date].ToString());
