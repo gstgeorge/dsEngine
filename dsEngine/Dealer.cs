@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -35,7 +36,7 @@ namespace dsEngine
         /// <summary>
         /// A collection of dealers which have previously been configured.
         /// </summary>
-        public static SortedSet<Dealer> DealerDirectory = new SortedSet<Dealer>();
+        public static SortedSet<Dealer> DealerDirectory { get; } = new SortedSet<Dealer>();
 
         /// <summary>
         /// The dealer's business name.
@@ -84,7 +85,7 @@ namespace dsEngine
         /// Vehicles which have been processed for this dealer.
         /// </summary>
         [JsonIgnore]
-        public SortedDictionary<DateTime, List<Vehicle>> WorkOrders { get; private set; } = new SortedDictionary<DateTime, List<Vehicle>>();
+        public SortedDictionary<DateTime, WorkOrder> WorkOrders { get; } = new SortedDictionary<DateTime, WorkOrder>();
 
         /// <summary>
         /// List of monthly charges that should be billed to the dealer.
@@ -145,89 +146,18 @@ namespace dsEngine
 
                 // Dealer does not exist in the dealer directory.
                 // TODO: Prompt user to add dealer to the dealer directory and attempt to re-process this file
-                catch (InvalidOperationException)
+                catch (InvalidOperationException ioe)
                 {
-                    MessageBox.Show("Dealer not found. Skipping.");
-                    continue;
-                }
-
-                // Vehicle already exists on this work order.
-                // TODO: Do something with this.
-                catch (ArgumentException)
-                {
+                    MessageBox.Show(ioe.Message + Environment.NewLine + Environment.NewLine + $"{Path.GetFileName(path)} will not be processed.");
                     continue;
                 }
             }
-        }
-
-        /// <summary>
-        /// Load saved dealer configs from disk and add them to the dealer directory.
-        /// </summary>
-        public static void LoadDealers()
-        {
-            if (Directory.Exists(Settings.DEALER_SETTINGS_PATH))
-            {
-                foreach (string f in Directory.EnumerateFiles(Settings.DEALER_SETTINGS_PATH))
-                {
-                    DealerDirectory.Add(JsonConvert.DeserializeObject<Dealer>(File.ReadAllText(f)));
-                }
-            }
-        }
-
-        /// <summary>
-        /// Write the dealer settings to disk at <see cref="Settings.DEALER_SETTINGS_PATH"/>.
-        /// </summary>
-        private void Save()
-        {
-            File.WriteAllText(Settings.DEALER_SETTINGS_PATH + FileName + ".json", JsonConvert.SerializeObject(this, Formatting.Indented));
-        }
-
-
-        /// <summary>
-        /// Add a vehicle to the work order of a specified dealer.
-        /// </summary>
-        /// <param name="dealerName">The dealer's name.</param>
-        /// <param name="date">The date of the workorder.</param>
-        /// <param name="vehicle">The vehicle to add.</param>
-        /// <exception cref="InvalidOperationException">Dealer does not exist in the dealer directory.</exception>
-        /// <exception cref="ArgumentException">Vehicle already exists on specified workorder.</exception>
-        private static void AddVehicleToWorkOrder(string dealerName, DateTime date, Vehicle vehicle)
-        {
-            // Lookup dealer in dealer directory
-            var dealer = DealerDirectory.FirstOrDefault(x => x.Name == dealerName);
-
-            // If dealer does not exist in the dealer directory, throw an exception.
-            if (dealer == null)
-            {
-                throw new InvalidOperationException("Dealer configuration not found.");
-            }
-
-            // If there is no work order for the given date, create one.
-            if (!dealer.WorkOrders.ContainsKey(date))
-            {
-                dealer.WorkOrders.Add(date, new List<Vehicle>());
-            }
-
-            // Add the vehicle to the workorder
-            // If the vehicle already exists on the workorder, throw exception
-            if (dealer.WorkOrders[date].Contains(vehicle))
-            {
-                throw new ArgumentException($"{dealer.Name}: {vehicle} has already been billed on {date.Month}/{date.Day}/{date.Year}");
-            }
-            else dealer.WorkOrders[date].Add(vehicle);
-        }
-
-        // Implement IComparable interface
-        public int CompareTo(Dealer other)
-        {
-            return Name.CompareTo(other.Name);
         }
 
         /// <summary>
         /// Process a CSV file of vehicle data, adding each vehicle to the dealer's work orders.
         /// </summary>
         /// <param name="path">The path of the file to process.</param>
-        /// <exception cref="ArgumentException">Vehicle already exists on specified workorder.</exception>
         /// <exception cref="InvalidDataException">The file is not formatted in a recognizable manner.</exception>
         /// <exception cref="InvalidOperationException">Dealer does not exist in the dealer directory.</exception>
         private static void ParseCSV(string path)
@@ -283,17 +213,71 @@ namespace dsEngine
 
                 try
                 {
-                    AddVehicleToWorkOrder(row["Dealer Name"].ToString(), new DateTime(d.Year, d.Month, d.Day), v);
+                    AddVehicleToWorkOrder(row["Dealer Name"].ToString(), d, v);
                 }
                 catch (InvalidOperationException ioex)
                 {
                     throw ioex;
                 }
-                catch (ArgumentException aex)
+            }
+        }
+
+        /// <summary>
+        /// Add a vehicle to the work order of a specified dealer.
+        /// </summary>
+        /// <param name="dealerName">The dealer's name.</param>
+        /// <param name="date">The date of the workorder.</param>
+        /// <param name="vehicle">The vehicle to add.</param>
+        /// <exception cref="InvalidOperationException">Dealer does not exist in the dealer directory.</exception>
+        private static void AddVehicleToWorkOrder(string dealerName, DateTime date, Vehicle vehicle)
+        {
+            // Lookup dealer in dealer directory
+            // If dealer does not exist in the dealer directory, throw an exception.
+            var dealer = DealerDirectory.FirstOrDefault(x => x.Name == dealerName) ?? throw new InvalidOperationException($"No configuration found for {dealerName}.");
+
+            // Clean date to remove time
+            DateTime cleanDate = new DateTime(date.Year, date.Month, date.Day);
+
+            // If there is no work order for the given date, create one.
+            if (dealer.WorkOrders.ContainsKey(cleanDate) == false)
+            {
+                dealer.WorkOrders.Add(cleanDate, new WorkOrder());
+            }
+
+            // Add the vehicle to the workorder
+            // TODO: If the vehicle already exists on the workorder, do more than ignore it
+            if (dealer.WorkOrders[cleanDate].Vehicles.Add(vehicle) == false)
+            {
+                return;
+            }
+        }
+
+        /// <summary>
+        /// Load saved dealer configs from disk and add them to the dealer directory.
+        /// </summary>
+        public static void LoadDealers()
+        {
+            if (Directory.Exists(Settings.DEALER_SETTINGS_PATH))
+            {
+                foreach (string f in Directory.EnumerateFiles(Settings.DEALER_SETTINGS_PATH))
                 {
-                    throw aex;
+                    DealerDirectory.Add(JsonConvert.DeserializeObject<Dealer>(File.ReadAllText(f)));
                 }
             }
+        }
+
+        // Implement IComparable interface
+        public int CompareTo(Dealer other)
+        {
+            return Name.CompareTo(other.Name);
+        }
+
+        /// <summary>
+        /// Write the dealer settings to disk at <see cref="Settings.DEALER_SETTINGS_PATH"/>.
+        /// </summary>
+        private void Save()
+        {
+            File.WriteAllText(Settings.DEALER_SETTINGS_PATH + FileName + ".json", JsonConvert.SerializeObject(this, Formatting.Indented));
         }
 
         #endregion
