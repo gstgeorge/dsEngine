@@ -67,7 +67,7 @@ namespace dsEngine
                 // If this dealer is being renamed, remove the old config file.
                 if (!string.IsNullOrEmpty(_name))
                 {
-                    string delPath = Settings.DEALER_SETTINGS_PATH + FileName + ".json";
+                    string delPath = Settings.DEALER_SETTINGS_DIR + FileName + ".json";
 
                     if (File.Exists(delPath))
                     {
@@ -257,9 +257,9 @@ namespace dsEngine
         /// </summary>
         public static void LoadDealers()
         {
-            if (Directory.Exists(Settings.DEALER_SETTINGS_PATH))
+            if (Directory.Exists(Settings.DEALER_SETTINGS_DIR))
             {
-                foreach (string f in Directory.EnumerateFiles(Settings.DEALER_SETTINGS_PATH))
+                foreach (string f in Directory.EnumerateFiles(Settings.DEALER_SETTINGS_DIR))
                 {
                     DealerDirectory.Add(JsonConvert.DeserializeObject<Dealer>(File.ReadAllText(f)));
                 }
@@ -273,11 +273,11 @@ namespace dsEngine
         }
 
         /// <summary>
-        /// Write the dealer settings to disk at <see cref="Settings.DEALER_SETTINGS_PATH"/>.
+        /// Write the dealer settings to disk at <see cref="Settings.DEALER_SETTINGS_DIR"/>.
         /// </summary>
         private void Save()
         {
-            File.WriteAllText(Settings.DEALER_SETTINGS_PATH + FileName + ".json", JsonConvert.SerializeObject(this, Formatting.Indented));
+            File.WriteAllText(Settings.DEALER_SETTINGS_DIR + FileName + ".json", JsonConvert.SerializeObject(this, Formatting.Indented));
         }
 
         #endregion
