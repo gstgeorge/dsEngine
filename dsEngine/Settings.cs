@@ -22,7 +22,7 @@ namespace dsEngine
             }
         }
 
-        public static Config UserConfig { get; private set; } = new Config();
+        public static UserConfig Config { get; private set; } = new UserConfig();
 
         private static string LOGO_DIR
         {
@@ -41,7 +41,7 @@ namespace dsEngine
         {
             if (File.Exists(SETTINGS_DIR + "config.json"))
             {
-                UserConfig = JsonConvert.DeserializeObject<Config>(File.ReadAllText("config.json"));
+                UserConfig = JsonConvert.DeserializeObject<UserConfig>(File.ReadAllText("config.json"));
             }
         }
 

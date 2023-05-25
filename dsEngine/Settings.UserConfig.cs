@@ -8,7 +8,7 @@ namespace dsEngine
 {
     internal partial class Settings
     {
-        internal class Config
+        internal class UserConfig
         {
             private string _logoFilename;
 
