@@ -43,6 +43,7 @@ namespace dsEngine
             _year = year;
             _make = make;
             _model = model;
+            _price = price;
         }
 
 
