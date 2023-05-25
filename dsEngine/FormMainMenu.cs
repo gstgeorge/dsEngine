@@ -1,12 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
+using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows.Forms;
+
 
 namespace dsEngine
 {
@@ -15,6 +12,14 @@ namespace dsEngine
         public FormMainMenu()
         {
             InitializeComponent();
+            
+            Settings.LoadUserConfig();
+            Dealer.LoadDealers();
+
+            Settings.UserConfig.LogoFilename = "testlogo.png";
+            Settings.SaveUserConfig();
+
+            Invoice.Generate(Dealer.DealerDirectory.ElementAt(0), @"C:\Users\spruce\Desktop\test.pdf");
         }
     }
 }
