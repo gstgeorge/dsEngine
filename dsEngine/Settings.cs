@@ -22,8 +22,15 @@ namespace dsEngine
             }
         }
 
-        public static UserConfig Config { get; private set; } = new UserConfig();
+        public static UserConfig Config { get; private set; }
 
+        private static string CONFIG_PATH
+        {
+            get
+            {
+                return SETTINGS_DIR + "config.json";
+            }
+        }
         private static string LOGO_DIR
         {
             get
@@ -32,17 +39,21 @@ namespace dsEngine
             }
         }
 
+
+
         public static void SaveUserConfig()
         {
-            File.WriteAllText("config.json", JsonConvert.SerializeObject(UserConfig));
+            File.WriteAllText(CONFIG_PATH, JsonConvert.SerializeObject(Config, Formatting.Indented));
         }
 
         public static void LoadUserConfig()
         {
-            if (File.Exists(SETTINGS_DIR + "config.json"))
+            if (File.Exists(CONFIG_PATH))
             {
-                UserConfig = JsonConvert.DeserializeObject<UserConfig>(File.ReadAllText("config.json"));
+                Config = JsonConvert.DeserializeObject<UserConfig>(File.ReadAllText(CONFIG_PATH));
             }
+
+            else Config = new UserConfig();
         }
 
         private static string EnsurePathExists(string path)

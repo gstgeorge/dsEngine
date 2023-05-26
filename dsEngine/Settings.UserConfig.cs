@@ -1,25 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace dsEngine
+﻿namespace dsEngine
 {
     internal partial class Settings
     {
         internal class UserConfig
         {
-            private string _logoFilename;
+            public string LogoFilename { get; set; } // TODO: remove later
 
-            public string LogoFilename 
-            {
-                get => _logoFilename;
-                set 
-                {
-                    _logoFilename = (value ==  null) ? null : Settings.LOGO_DIR + value;
+            public string LogoPath 
+            { 
+                get 
+                { 
+                    if (string.IsNullOrEmpty(LogoFilename))
+                    {
+                        return null;
+                    }
+
+                    else return Settings.LOGO_DIR + LogoFilename; 
                 } 
             }
+
+            public string[] CompanyInfo { get; set; } = new string[5];
+
+            public System.Drawing.Color InvoiceAccentColor { get; set; } = System.Drawing.Color.FromArgb(0, 77, 153);
         }
     }
 }
