@@ -30,7 +30,6 @@ namespace dsEngine
             Name = name;
             Charges = new List<Charge>();
             DealerDirectory.Add(this);
-            Save();
         }
 
         /// <summary>
@@ -77,7 +76,6 @@ namespace dsEngine
 
                 // Assign the new name, and save the dealer config to disk.
                 _name = cleanValue;
-                Save();
             }
         }
 
