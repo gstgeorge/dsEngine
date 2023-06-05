@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -14,12 +13,12 @@ namespace dsEngine
     /// <summary>
     /// Stores dealer and monthly charges for invoicing.
     /// </summary>
-    internal class Dealer : IComparable<Dealer>
+    internal partial class Dealer : IComparable<Dealer>
     {
         // Private fields.
         private string _name;
 
-        #region Properties
+
 
         /// <summary>
         /// Initializes a new instance of the Dealer class.
@@ -29,6 +28,7 @@ namespace dsEngine
         {
             Name = name;
             Charges = new List<Charge>();
+            WorkOrders = new SortedDictionary<DateTime, WorkOrder>();
             DealerDirectory.Add(this);
         }
 
@@ -76,6 +76,7 @@ namespace dsEngine
 
                 // Assign the new name, and save the dealer config to disk.
                 _name = cleanValue;
+                Save();
             }
         }
 
@@ -83,12 +84,12 @@ namespace dsEngine
         /// Vehicles which have been processed for this dealer.
         /// </summary>
         [JsonIgnore]
-        public SortedDictionary<DateTime, WorkOrder> WorkOrders { get; } = new SortedDictionary<DateTime, WorkOrder>();
+        public SortedDictionary<DateTime, WorkOrder> WorkOrders { get; }
 
         /// <summary>
         /// List of monthly charges that should be billed to the dealer.
         /// </summary>
-        public List<Charge> Charges { get; set; }
+        public List<Charge> Charges { get; }
 
         /// <summary>
         /// Flag to signal whether an invoice should be generated for this dealer.
@@ -101,9 +102,7 @@ namespace dsEngine
         /// </summary>
         public string FileName { get => _name.Replace(' ', '_').ToLower(); }
 
-        #endregion
 
-        #region Methods
 
         /// <summary>
         /// Parse one or more files, adding each vehicle to the dealer's work orders
@@ -270,66 +269,17 @@ namespace dsEngine
             return Name.CompareTo(other.Name);
         }
 
+        public void GenerateInvoice(string outputDir, DateTime reportDate)
+        {
+            Invoice.Generate(this, outputDir, reportDate);
+        }
+
         /// <summary>
         /// Write the dealer settings to disk at <see cref="Settings.DEALER_SETTINGS_DIR"/>.
         /// </summary>
         private void Save()
         {
             File.WriteAllText(Settings.DEALER_SETTINGS_DIR + FileName + ".json", JsonConvert.SerializeObject(this, Formatting.Indented));
-        }
-
-        #endregion
-
-        /// <summary>
-        /// Stores info on monthly charges.
-        /// </summary>
-        internal class Charge
-        {
-            /// <summary>
-            /// Type of monthly charge.
-            /// </summary>
-            public enum ChargeType 
-            { 
-                /// <summary>
-                /// Charge should appear as-is. This is a fixed monthly charge.
-                /// </summary>
-                FIXED, 
-
-                /// <summary>
-                /// Charge should be multiplied by the number of Used vehicles processed.
-                /// </summary>
-                USED, 
-
-                /// <summary>
-                /// Charge should be multiplied by the number of New vehicles processed.
-                /// </summary>
-                NEW, 
-
-                /// <summary>
-                /// Charge should be multiplied by the total number of vehicles processed.
-                /// </summary>
-                VEHICLE 
-            }
-
-            /// <summary>
-            /// The charge's line item description.
-            /// </summary>
-            public string Name { get; set; }
-
-            /// <summary>
-            /// The type of charge.
-            /// </summary>
-            public ChargeType Type { get; set; }
-
-            /// <summary>
-            /// The charge amount.
-            /// </summary>
-            public double Amount { get; set; }
-
-            /// <summary>
-            /// Should the charge be included when an invoice for this dealer is generated?
-            /// </summary>
-            public bool Enabled { get; set; }
         }
     }
 }
