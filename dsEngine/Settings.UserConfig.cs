@@ -4,20 +4,7 @@
     {
         internal class UserConfig
         {
-            public string LogoFilename { get; set; } // TODO: remove later
-
-            public string LogoPath 
-            { 
-                get 
-                { 
-                    if (string.IsNullOrEmpty(LogoFilename))
-                    {
-                        return null;
-                    }
-
-                    else return Settings.LOGO_DIR + LogoFilename; 
-                } 
-            }
+            public string LogoPath { get; set; }
 
             public string[] CompanyInfo { get; set; } = new string[5];
 

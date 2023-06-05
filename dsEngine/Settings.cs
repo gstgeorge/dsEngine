@@ -31,15 +31,6 @@ namespace dsEngine
                 return SETTINGS_DIR + "config.json";
             }
         }
-        private static string LOGO_DIR
-        {
-            get
-            {
-                return EnsurePathExists(SETTINGS_DIR + "logo" + Path.DirectorySeparatorChar);
-            }
-        }
-
-
 
         public static void SaveUserConfig()
         {
