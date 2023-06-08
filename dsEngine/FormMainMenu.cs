@@ -16,10 +16,8 @@ namespace dsEngine
             Settings.LoadUserConfig();
             Dealer.LoadDealers();
 
-            Settings.UserConfig.LogoFilename = "testlogo.png";
-            Settings.SaveUserConfig();
-
-            Invoice.Generate(Dealer.DealerDirectory.ElementAt(0), @"C:\Users\spruce\Desktop\test.pdf");
+            Dealer.DealerDirectory.ElementAt(0).GenerateInvoice(@"C:\Users\spruce\Desktop\", DateTime.Now);
+            
         }
     }
 }
