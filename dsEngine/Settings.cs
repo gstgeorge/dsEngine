@@ -44,7 +44,11 @@ namespace dsEngine
                 Config = JsonConvert.DeserializeObject<UserConfig>(File.ReadAllText(CONFIG_PATH));
             }
 
-            else Config = new UserConfig();
+            else
+            {
+                Config = new UserConfig();
+                SaveUserConfig();
+            }
         }
 
         private static string EnsurePathExists(string path)
